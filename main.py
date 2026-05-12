@@ -6,17 +6,13 @@ from agent_tools import web_search
 
 import os
 from dotenv import load_dotenv
+import sqlite3
 
 load_dotenv()
 
 api_key = os.getenv("API_KEY")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MEMORY_FILE = os.path.join(BASE_DIR, "memory.db")
-
-#create the memory file
-if not os.path.exists(MEMORY_FILE):
-    with open(MEMORY_FILE,"w") as file:
-        pass
 
 llm = ChatGoogleGenerativeAI(model="models/gemini-2.5-flash", google_api_key=api_key)
 instruction = """
@@ -52,16 +48,26 @@ You are X.A.R.V.I.S. (eXtreme Analytical Responsive Virtual Intelligent System),
 - End complex tasks with a status confirmation, e.g., "The sequence is complete. Standing by for further instructions."
 """
 tools = [web_search]
+conn = sqlite3.connect(MEMORY_FILE,check_same_thread=False)
+memory = SqliteSaver.from_conn_string(conn)
 
 agent = create_agent(
     model=llm,
     tools=tools,
     system_prompt=instruction,
-    
+    checkpointer=memory, #type: ignore
 )
 
 print("Hello sir, what do you require today.")
-valid = True
 exit_words = ['bye','exit','end','goodbye']
+config = {"configurable": {"thread_id": "xarvis-main"}}
 
-memory = SqliteSaver.from_conn_string(MEMORY_FILE)
+while True:
+    query = input("-> ")
+    if query.lower() in exit_words:
+        break
+    response = agent.invoke({"messages": [("user", query)]}, config) #type: ignore
+    last_message = response['messages'][-1]
+    last_message = response['messages'][-1]
+    print(f"\nX.A.R.V.I.S.: {last_message.content}\n")
+            
