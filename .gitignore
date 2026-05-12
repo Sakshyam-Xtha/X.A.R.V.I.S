@@ -1,3 +1,6 @@
 .env
 memory.txt
 memory.db
+.venv/
+venv/
+ENV/
