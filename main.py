@@ -11,7 +11,7 @@ load_dotenv()
 
 api_key = os.getenv("API_KEY")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MEMORY_FILE = os.path.join(BASE_DIR, "memory.txt")
+MEMORY_FILE = os.path.join(BASE_DIR, "memory.db")
 
 #create the memory file
 if not os.path.exists(MEMORY_FILE):
