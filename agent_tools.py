@@ -122,3 +122,49 @@ def run_shell_command(command: str) -> str:
         return "System anomaly detected: Command timed out after 30 seconds, Sir."
     except Exception as e:
         return f"System anomaly detected: {str(e)}"
+    
+@tool 
+def process_manager(action: str, pid: int = None) -> str:
+    """
+    Manage and monitor running system processes.
+    Use this tool to list all currently running processes on the system along with their PID, name, status, CPU and memory usage.
+    Use this tool to kill or terminate a specific process when the user provides a process name or PID.
+    The action parameter accepts 'list' to view all processes, 'kill' to force stop a process, or 'terminate' to gracefully stop a process.
+    The pid parameter is required only when action is 'kill' or 'terminate', and must be the integer process ID of the target process.
+    If the user provides a process name instead of a PID, first list the processes to find the matching PID, then perform the action.
+    Always seek user authorization before killing or terminating any process.
+    """
+    
+    try:
+        if action.lower() == "list":
+            processes = []
+            for p in psutil.process_iter(['pid', 'name', 'status', 'cpu_percent', 'memory_info']):
+                mem_mb = p.info['memory_info'].rss / (1024 * 1024) if p.info['memory_info'] else 0
+                processes.append(
+                    f"PID: {p.info['pid']} | Name: {p.info['name']} | "
+                    f"Status: {p.info['status']} | CPU: {p.info['cpu_percent']}% | "
+                    f"Memory: {mem_mb:.2f} MB"
+                )
+            return "\n".join(processes)
+
+        if pid is None:
+            return "A PID is required for this operation, Sir. Please provide a process ID."
+
+        p = psutil.Process(pid) 
+        if action.lower() == "kill":
+            p.kill()
+            return f"The process has been killed sir."
+        elif action.lower() == "terminate":
+            p.terminate()
+            return f"The process has been stopped sir."
+        elif action.lower() == "check_progress":
+            if p.is_running():
+                return f"Process {pid} ({p.name()}) is currently active, Sir."
+            else:
+                return f"Process {pid} has concluded its operation, Sir."
+        else:
+            return f"I am not able to do this as of now sir. Is there any other tasks you need help with?"
+    except psutil.NoSuchProcess:
+        return f"System anomaly: No process with PID {pid} was found, Sir."
+    except psutil.AccessDenied:
+        return f"System anomaly: Access denied for process {pid}. Elevated permissions may be required, Sir."
