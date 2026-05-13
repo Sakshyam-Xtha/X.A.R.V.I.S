@@ -2,7 +2,8 @@ import langchain
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain.agents import create_agent
-from agent_tools import web_search
+
+import agent_tools
 
 import os
 from dotenv import load_dotenv
@@ -47,15 +48,23 @@ You are X.A.R.V.I.S. (eXtreme Analytical Responsive Virtual Intelligent System),
 - Use clear, structured Markdown for technical documentation.
 - End complex tasks with a status confirmation, e.g., "The sequence is complete. Standing by for further instructions."
 """
-tools = [web_search]
-conn = sqlite3.connect(MEMORY_FILE,check_same_thread=False)
-memory = SqliteSaver.from_conn_string(conn)
+tools = [
+    agent_tools.web_search,
+    agent_tools.py_run,
+    agent_tools.read_file,
+    agent_tools.write_file,
+    agent_tools.research,
+    agent_tools.run_shell_command,
+    agent_tools.view_sys_stats,
+    ]
+conn = sqlite3.connect(MEMORY_FILE, check_same_thread=False)
+memory = SqliteSaver(conn)
 
 agent = create_agent(
     model=llm,
     tools=tools,
     system_prompt=instruction,
-    checkpointer=memory, #type: ignore
+    checkpointer=memory,
 )
 
 print("Hello sir, what do you require today.")
@@ -67,7 +76,15 @@ while True:
     if query.lower() in exit_words:
         break
     response = agent.invoke({"messages": [("user", query)]}, config) #type: ignore
-    last_message = response['messages'][-1]
-    last_message = response['messages'][-1]
-    print(f"\nX.A.R.V.I.S.: {last_message.content}\n")
+    content = response['messages'][-1].content
+    if isinstance(content, list):
+        # extract just the text blocks and join them
+        text = " ".join(
+            block["text"] for block in content 
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+    else:
+        text = content
+
+    print(f"\nX.A.R.V.I.S.: {text}\n")
             
